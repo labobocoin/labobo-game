@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مغامرة لابوبو - تجمع العملات قبل الإطلاق!</title>
+    <title>مغامرة لابوبو - العب واربح عملات $LABUBU!</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.70.1/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-base@0.9.19/lib/index.iife.min.js"></script>
@@ -11,6 +11,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-solflare@0.6.19/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-wallets@0.19.15/lib/index.iife.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@solana/wallet-adapter-react@0.15.35/lib/index.iife.min.js"></script>
+    
+    <!-- مكتبة Phaser للألعاب -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    
     <style>
         :root {
             --primary: #6a11cb;
@@ -126,6 +130,12 @@
             background: linear-gradient(45deg, var(--warning), #ff416c);
         }
         
+        .btn-play {
+            background: linear-gradient(45deg, #ff00cc, #333399);
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+        
         .main-content {
             display: grid;
             grid-template-columns: 1fr;
@@ -144,6 +154,8 @@
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
         }
         
         .game-header {
@@ -178,58 +190,33 @@
             gap: 10px;
         }
         
-        .game-area {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
-            height: 400px;
+        .game-container {
             position: relative;
+            flex-grow: 1;
+            border-radius: 15px;
             overflow: hidden;
-            margin-bottom: 25px;
+            background: #1a1a2e;
+            min-height: 400px;
         }
         
-        .character {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(45deg, #ff9a9e, #fad0c4);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            z-index: 10;
-        }
-        
-        .coin {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background: linear-gradient(45deg, #FFD700, #FFA500);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            animation: float 3s infinite ease-in-out;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
-        
-        .ground {
-            position: absolute;
-            bottom: 0;
-            left: 0;
+        #gameCanvas {
             width: 100%;
-            height: 50px;
-            background: linear-gradient(to top, #5d4037, #8d6e63);
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
+            height: 100%;
+            display: block;
+        }
+        
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .controls-info {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 10px;
+            font-size: 14px;
         }
         
         .collect-btn {
@@ -347,6 +334,60 @@
         .notification.error {
             background: var(--accent);
         }
+        
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .overlay-title {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        .overlay-text {
+            font-size: 20px;
+            margin-bottom: 30px;
+            max-width: 600px;
+        }
+        
+        .overlay-stats {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            border-radius: 15px;
+            min-width: 150px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .stat-label {
+            font-size: 16px;
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -383,9 +424,44 @@
                     </div>
                 </div>
                 
-                <div class="game-area" id="gameArea">
-                    <div class="character">🐰</div>
-                    <div class="ground"></div>
+                <div class="game-container">
+                    <div id="gameOverlay" class="game-overlay">
+                        <h2 class="overlay-title">مغامرة لابوبو</h2>
+                        <p class="overlay-text">
+                            ساعد لابوبو في جمع أكبر عدد من العملات الذهبية!<br>
+                            استخدم مفاتيح الأسهم أو المس الشاشة للتحرك
+                        </p>
+                        <div class="overlay-stats">
+                            <div class="stat-box">
+                                <div class="stat-value" id="highScore">0</div>
+                                <div class="stat-label">أعلى نتيجة</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="totalCoins">0</div>
+                                <div class="stat-label">العملات المجمعة</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-play" id="startGame">
+                            <i class="fas fa-play"></i> بدء اللعبة
+                        </button>
+                    </div>
+                    <canvas id="gameCanvas"></canvas>
+                </div>
+                
+                <div class="game-controls">
+                    <button class="btn" id="leftBtn">
+                        <i class="fas fa-arrow-left"></i> يسار
+                    </button>
+                    <button class="btn" id="jumpBtn">
+                        <i class="fas fa-arrow-up"></i> قفز
+                    </button>
+                    <button class="btn" id="rightBtn">
+                        يمين <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+                
+                <div class="controls-info">
+                    يمكنك استخدام مفاتيح الأسهم على الكيبورد للتحكم: ← → للسير، ↑ للقفز
                 </div>
                 
                 <button class="btn collect-btn" id="collectDaily">
@@ -465,7 +541,13 @@
         const telegramBtn = document.getElementById('telegramBtn');
         const notification = document.getElementById('notification');
         const notificationText = document.getElementById('notificationText');
-        const gameArea = document.getElementById('gameArea');
+        const startGameBtn = document.getElementById('startGame');
+        const gameOverlay = document.getElementById('gameOverlay');
+        const highScoreEl = document.getElementById('highScore');
+        const totalCoinsEl = document.getElementById('totalCoins');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const jumpBtn = document.getElementById('jumpBtn');
         
         // بيانات المستخدم
         let userData = {
@@ -474,7 +556,9 @@
             lastDaily: null,
             invitedFriends: 0,
             twitterFollowed: false,
-            telegramJoined: false
+            telegramJoined: false,
+            highScore: 0,
+            totalCoins: 0
         };
         
         // تهيئة المحفظة
@@ -485,12 +569,19 @@
         };
         
         // تهيئة اللعبة
+        let game;
+        let gameActive = false;
+        let gameCoins = 0;
+        let gameScore = 0;
+        
         function initGame() {
             // تحميل بيانات المستخدم من localStorage
             const savedData = localStorage.getItem('labubuGameData');
             if (savedData) {
                 userData = JSON.parse(savedData);
                 pointsCount.textContent = userData.points;
+                highScoreEl.textContent = userData.highScore;
+                totalCoinsEl.textContent = userData.totalCoins;
                 
                 // تحديث حالة المهام
                 updateTaskStatus();
@@ -499,27 +590,195 @@
                 checkDailyCollection();
             }
             
-            // إنشاء العملات في منطقة اللعبة
-            createCoins();
+            // تهيئة لعبة Phaser
+            const config = {
+                type: Phaser.AUTO,
+                width: 800,
+                height: 500,
+                parent: 'gameCanvas',
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        gravity: { y: 800 },
+                        debug: false
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                }
+            };
+            
+            game = new Phaser.Game(config);
         }
         
-        // إنشاء العملات
-        function createCoins() {
-            gameArea.innerHTML = `
-                <div class="character">🐰</div>
-                <div class="ground"></div>
-            `;
+        function preload() {
+            this.load.image('background', 'https://i.imgur.com/6Q9cY7a.png');
+            this.load.spritesheet('labubu', 'https://i.imgur.com/7VU4Z3s.png', { frameWidth: 64, frameHeight: 64 });
+            this.load.image('platform', 'https://i.imgur.com/3iQ5V9f.png');
+            this.load.image('coin', 'https://i.imgur.com/5JZJQJ9.png');
+        }
+        
+        function create() {
+            // إضافة الخلفية
+            this.add.image(400, 250, 'background');
             
-            for (let i = 0; i < 15; i++) {
-                const coin = document.createElement('div');
-                coin.className = 'coin';
-                coin.innerHTML = '🪙';
-                coin.style.left = `${Math.random() * 90 + 5}%`;
-                coin.style.top = `${Math.random() * 70 + 10}%`;
-                coin.style.animationDelay = `${Math.random() * 2}s`;
-                gameArea.appendChild(coin);
+            // إضافة المنصات
+            this.platforms = this.physics.add.staticGroup();
+            this.platforms.create(400, 450, 'platform').setScale(2, 0.5).refreshBody();
+            this.platforms.create(200, 350, 'platform');
+            this.platforms.create(600, 350, 'platform');
+            this.platforms.create(100, 250, 'platform');
+            this.platforms.create(700, 250, 'platform');
+            
+            // إضافة اللاعب
+            this.player = this.physics.add.sprite(100, 400, 'labubu');
+            this.player.setBounce(0.2);
+            this.player.setCollideWorldBounds(true);
+            this.player.setScale(0.8);
+            
+            // إعداد الرسوم المتحركة
+            this.anims.create({
+                key: 'left',
+                frames: this.anims.generateFrameNumbers('labubu', { start: 0, end: 3 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            
+            this.anims.create({
+                key: 'right',
+                frames: this.anims.generateFrameNumbers('labubu', { start: 4, end: 7 }),
+                frameRate: 10,
+                repeat: -1
+            });
+            
+            this.anims.create({
+                key: 'idle',
+                frames: [ { key: 'labubu', frame: 0 } ],
+                frameRate: 20
+            });
+            
+            // إضافة العملات
+            this.coins = this.physics.add.group({
+                key: 'coin',
+                repeat: 24,
+                setXY: { x: 12, y: 0, stepX: 70 }
+            });
+            
+            this.coins.children.iterate(function (child) {
+                child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+                child.setScale(0.8);
+            });
+            
+            // إضافة التصادمات
+            this.physics.add.collider(this.player, this.platforms);
+            this.physics.add.collider(this.coins, this.platforms);
+            this.physics.add.overlap(this.player, this.coins, collectCoin, null, this);
+            
+            // إعداد الكاميرا
+            this.cameras.main.startFollow(this.player);
+            this.cameras.main.setBounds(0, 0, 1600, 500);
+            
+            // إعداد عناصر التحكم
+            this.cursors = this.input.keyboard.createCursorKeys();
+            
+            // إخفاء اللعبة حتى يبدأ اللاعب
+            this.scene.pause();
+        }
+        
+        function update() {
+            if (!gameActive) return;
+            
+            if (this.cursors.left.isDown || leftBtnPressed) {
+                this.player.setVelocityX(-200);
+                this.player.anims.play('left', true);
+            }
+            else if (this.cursors.right.isDown || rightBtnPressed) {
+                this.player.setVelocityX(200);
+                this.player.anims.play('right', true);
+            }
+            else {
+                this.player.setVelocityX(0);
+                this.player.anims.play('idle', true);
+            }
+            
+            if ((this.cursors.up.isDown && this.player.body.touching.down) || (jumpBtnPressed && this.player.body.touching.down)) {
+                this.player.setVelocityY(-400);
+                jumpBtnPressed = false;
             }
         }
+        
+        function collectCoin(player, coin) {
+            coin.disableBody(true, true);
+            gameCoins++;
+            gameScore += 10;
+            
+            // تحديث النقاط في الوقت الحقيقي
+            userData.points += 1;
+            pointsCount.textContent = userData.points;
+            
+            // إذا لم يتبقى عملات، انتهت اللعبة
+            if (this.coins.countActive(true) === 0) {
+                endGame(true);
+            }
+        }
+        
+        function startGame() {
+            gameActive = true;
+            gameCoins = 0;
+            gameScore = 0;
+            gameOverlay.style.display = 'none';
+            game.scene.resume();
+        }
+        
+        function endGame(isWin) {
+            gameActive = false;
+            game.scene.pause();
+            
+            // تحديث الإحصائيات
+            userData.totalCoins += gameCoins;
+            if (gameScore > userData.highScore) {
+                userData.highScore = gameScore;
+                highScoreEl.textContent = userData.highScore;
+            }
+            totalCoinsEl.textContent = userData.totalCoins;
+            
+            // عرض شاشة النهاية
+            gameOverlay.style.display = 'flex';
+            gameOverlay.innerHTML = `
+                <h2 class="overlay-title">${isWin ? 'مبروك! فزت' : 'انتهت اللعبة'}</h2>
+                <p class="overlay-text">
+                    ${isWin ? 'لقد جمعت جميع العملات!' : 'حاول مرة أخرى!'}<br>
+                    لقد جمعت ${gameCoins} عملة وحصلت على ${gameScore} نقطة
+                </p>
+                <div class="overlay-stats">
+                    <div class="stat-box">
+                        <div class="stat-value">${gameCoins}</div>
+                        <div class="stat-label">العملات المجمعة</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${gameScore}</div>
+                        <div class="stat-label">النقاط المكتسبة</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${userData.highScore}</div>
+                        <div class="stat-label">أعلى نتيجة</div>
+                    </div>
+                </div>
+                <button class="btn btn-play" id="restartGame">
+                    <i class="fas fa-redo"></i> اللعب مرة أخرى
+                </button>
+            `;
+            
+            document.getElementById('restartGame').addEventListener('click', startGame);
+            saveUserData();
+        }
+        
+        // التحكم بالزر
+        let leftBtnPressed = false;
+        let rightBtnPressed = false;
+        let jumpBtnPressed = false;
         
         // تحديث حالة المهام
         function updateTaskStatus() {
@@ -679,6 +938,33 @@
             inviteBtn.addEventListener('click', inviteFriend);
             twitterBtn.addEventListener('click', followTwitter);
             telegramBtn.addEventListener('click', joinTelegram);
+            startGameBtn.addEventListener('click', startGame);
+            
+            // أحداث أزرار التحكم
+            leftBtn.addEventListener('mousedown', () => leftBtnPressed = true);
+            leftBtn.addEventListener('mouseup', () => leftBtnPressed = false);
+            leftBtn.addEventListener('mouseleave', () => leftBtnPressed = false);
+            
+            rightBtn.addEventListener('mousedown', () => rightBtnPressed = true);
+            rightBtn.addEventListener('mouseup', () => rightBtnPressed = false);
+            rightBtn.addEventListener('mouseleave', () => rightBtnPressed = false);
+            
+            jumpBtn.addEventListener('mousedown', () => jumpBtnPressed = true);
+            jumpBtn.addEventListener('mouseup', () => jumpBtnPressed = false);
+            jumpBtn.addEventListener('mouseleave', () => jumpBtnPressed = false);
+            
+            // أحداث لوحة المفاتيح
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') leftBtnPressed = true;
+                if (e.key === 'ArrowRight') rightBtnPressed = true;
+                if (e.key === 'ArrowUp') jumpBtnPressed = true;
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowLeft') leftBtnPressed = false;
+                if (e.key === 'ArrowRight') rightBtnPressed = false;
+                if (e.key === 'ArrowUp') jumpBtnPressed = false;
+            });
         }
         
         // بدء التطبيق
